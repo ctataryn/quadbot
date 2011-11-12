@@ -1,0 +1,13 @@
+# quadbot
+
+IRC bot written in Clojure
+
+## Usage
+
+TODO
+
+## License
+
+Copyright (C) 2011 Craig Tataryn <craiger@tataryn.net>
+
+Distributed under the Eclipse Public License, the same as Clojure.
