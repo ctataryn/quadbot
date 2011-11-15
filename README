@@ -3,8 +3,11 @@
 IRC bot written in Clojure
 
 ## Usage
+First compile quadbot:
+lein compile quadbot.client
 
-TODO
+Then run quadbot:
+lein run quadbot.client --pwd <NickServ Password>
 
 ## License
 
