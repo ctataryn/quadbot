@@ -6,6 +6,7 @@
  (def freenode {:name "irc.freenode.net" :port 6667})
  (def user {:name "#quadron bot" :nick "quadbot" :join "#test-cwt"})
  (def admins #{"ThaDon"})
+ (def cmdprefix "~")
 
  (declare conn-handler)
 
@@ -32,15 +33,31 @@
   (str "PRIVMSG " (:channel msgMap) " :" (:user msgMap) ": " msg))
 
  (defn stripUser [msg]
-   (.trim (second (re-find (re-pattern (str "^" (:nick user) ":(.*)")) msg))))
+   (let [pattrn (re-pattern (str "^" (:nick user) ":(.*)"))]
+    (if (re-matches pattrn msg)
+      (.trim (second (re-find pattrn msg)))
+      msg)))
+
+ (defn stripCmdPrefix [msg]
+   (if (re-matches (re-pattern (str "^" cmdprefix)) msg)
+     ;;lop off the cmdprefix, assuming it's one char
+     (apply str (rest msg))
+     msg
+     ))
 
  (defn reactToMsg [msgMap]
-   (let [msg (.trim (stripUser (.trim (:message msgMap))))]
+   (let [msg (.trim (stripCmdPrefix (stripUser (.trim (:message msgMap)))))]
      (cond
-       ;; parse a command out of :message and return something to write out to the client
+       ;; parse a command out of msg and return something to write out to the client
+       ;; check if they are trying to add a factoid
+       (re-matches #"^(.*)\sis\s(.*)$" msg)
+       (let [matches (re-find #"^(.*)\sis\s(.*)$" msg)
+             fact (second matches)
+             definition (nth matches 2)]
+         (createMention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact)))
        (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
        "QUIT"
-       true ;; default
+       :else ;; default
        (createMention msgMap "Sorry, I didn't gr0k what you said..."))))
 
 ;;
@@ -51,9 +68,11 @@
   (write conn (cond
       ;;add more actions here, for when the bot isn't specifically mentioned in a message
       ;;
-      ;;If the bot was specifically mentioned, find out what the user wants
-      ;;i.e. quadbot: how old are you?
-      (re-matches (re-pattern (str "^" (:nick user) ":.*")) (.trim (:message msgMap))) 
+      ;;If the bot was specifically mentioned, or the cmdprefix was used find out what the user wants
+      ;;i.e. quadbot: fact is factoid
+      ;;Or: ~fact is factoid
+      (or (re-matches (re-pattern (str "^" (:nick user) ":.*")) (.trim (:message msgMap))) 
+          (re-matches (re-pattern (str "^" cmdprefix ".*")) (.trim (:message msgMap)))) 
       (reactToMsg msgMap))))
 
  (defn conn-handler [conn]
