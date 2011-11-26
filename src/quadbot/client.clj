@@ -68,6 +68,14 @@
              fact (second matches) ]
          (createMsg msgMap (:ANSWER (dao/retrieve-factoid fact))))
 
+       ;; delete a factoid
+       (and (isAdmin? (:user msgMap)) (re-matches #"^forget\s(\w+)$" msg))
+       (let [matches (re-find #"^forget\s(\w+)$" msg)
+             fact (second matches)]
+         (do
+           (dao/delete-factoid fact)
+           (createMention msgMap (str "What's '" fact "'? ;)"))))
+       
        ;; tell the bot to quit
        (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
        "QUIT"
@@ -102,11 +110,11 @@
                              (re-find #"^PING" msg)
                              (write conn (str "PONG "  (re-find #":.*" msg)))))))
 
- (defn login [conn user nickservpwd]
+ (defn login [conn user nickservpwd channels]
       (write conn (str "NICK " (:nick user)))
       (write conn (str "USER " (:nick user) " 0 * :" (:name user)))
       (write conn (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd))
-      (write conn (str "JOIN " (:join user))))
+      (map (fn [chan] (write conn (str "JOIN " chan))) channels))
 
 ;; main entry point from command-line
  (defn -main [& args]
@@ -114,8 +122,9 @@
     (with-command-line args
           "QuadBot"
           [[pwd "Password for NickServ registration" 1]
+           [chans "Channels to join" 1]
            remaining]
-          (login irc user pwd)
+          (login irc user pwd (clojure.string/split chans #","))
         )))
    
 ;;(def irc (connect freenode))
