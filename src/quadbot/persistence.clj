@@ -45,6 +45,7 @@
      (clojure.java.jdbc/transaction
        (f))))
   
+;returns the id of the factoid which was created
 (defn insert-factoid [nick fact answer] 
   "(insert factoid) returns a map of {:SCOPE_IDENTITY() <number>} we want the number"
     (second (first (insert factoid
