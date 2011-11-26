@@ -49,12 +49,11 @@
 ;returns the id of the factoid which was created
 (defn insert-factoid [nick fact answer] 
   "(insert factoid) returns a map of {:SCOPE_IDENTITY() <number>} we want the number"
-    (second (first (insert factoid
+    (invoke-with-connection #(second (first (insert factoid
       (values {:created_by nick :fact fact :answer answer}))
-      )))
+      ))))
 
-(defn insert-factoid2 [] ;[nick fact answer] 
-  "(insert users) returns a map of {:SCOPE_IDENTITY() <number>} we want the number"
-    (insert factoid
-      ;(values {:created_by nick :fact fact :answer answer}))
-      (values {:created_by "ThaDon" :fact "Bleh" :answer "Blarg"})))
+
+(defn delete-factoid [fact]
+  (invoke-with-connection #(delete factoid (where {:fact [= fact]}))))
+
