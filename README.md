@@ -7,7 +7,7 @@ First compile quadbot:
 lein compile quadbot.client
 
 Then run quadbot:
-lein run quadbot.client --pwd <NickServ Password> --chans <comma,delimited,list,of,#chans>
+`lein run quadbot.client --pwd <NickServ Password> --chans <comma,delimited,list,of,#chans>`
 
 ## License
 
