@@ -37,6 +37,7 @@
   []
   (sql/with-query-results rs ["select IDENTITY()"]))
 
+;; Invokes a function with a connection inside a transaction
 ;; (invoke-with-connection drop-tables)
 ;; (invoke-with-connection create-tables)
 ;; (def ident (invoke-with-connection #(insert-factoid "ThaDon" "bleh" "blarg")))
@@ -56,4 +57,7 @@
 
 (defn delete-factoid [fact]
   (invoke-with-connection #(delete factoid (where {:fact [= fact]}))))
+
+(defn retrieve-factoid [fact]
+  (first (invoke-with-connection #(select factoid (where {:fact [= fact]}) (order :created_on :DESC)))))
 

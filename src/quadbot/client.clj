@@ -1,7 +1,8 @@
  (ns quadbot.client
       (:import (java.net Socket)
                            (java.io PrintWriter InputStreamReader BufferedReader))
-      (:use clojure.contrib.command-line))
+      (:use clojure.contrib.command-line)
+      (:require [quadbot.persistence :as dao]))
    
  (def freenode {:name "irc.freenode.net" :port 6667})
  (def user {:name "#quadron bot" :nick "quadbot" :join "#test-cwt"})
@@ -29,8 +30,11 @@
  (defn parseMsg [msg]
     (zipmap [:user :channel :message] (rest (re-find #"^:(.*)!.*\sPRIVMSG\s(.*)\s:(.*)$" msg))))
 
+(defn createMsg [msgMap msg]
+  (str "PRIVMSG " (:channel msgMap) " :" msg))
+
  (defn createMention [msgMap msg]
-  (str "PRIVMSG " (:channel msgMap) " :" (:user msgMap) ": " msg))
+  (str (createMsg msgMap (str (:user msgMap) ": " msg))))
 
  (defn stripUser [msg]
    (let [pattrn (re-pattern (str "^" (:nick user) ":(.*)"))]
@@ -39,22 +43,32 @@
       msg)))
 
  (defn stripCmdPrefix [msg]
-   (if (re-matches (re-pattern (str "^" cmdprefix)) msg)
+   (if (re-matches (re-pattern (str "^" cmdprefix ".*")) msg)
      ;;lop off the cmdprefix, assuming it's one char
      (apply str (rest msg))
-     msg
-     ))
+     msg))
 
  (defn reactToMsg [msgMap]
    (let [msg (.trim (stripCmdPrefix (stripUser (.trim (:message msgMap)))))]
      (cond
        ;; parse a command out of msg and return something to write out to the client
+
        ;; check if they are trying to add a factoid
-       (re-matches #"^(.*)\sis\s(.*)$" msg)
-       (let [matches (re-find #"^(.*)\sis\s(.*)$" msg)
+       (re-matches #"^\w+\sis\s.+$" msg)
+       (let [matches (re-find #"^(\w+)\sis\s(.+)$" msg)
              fact (second matches)
              definition (nth matches 2)]
-         (createMention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact)))
+         (do
+           (dao/insert-factoid (:user msgMap) fact definition)
+           (createMention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
+
+       ;; retrieve a factoid
+       (re-matches #"^\w+$" msg)
+       (let [matches (re-find #"^(\w+)$" msg)
+             fact (second matches) ]
+         (createMsg msgMap (:ANSWER (dao/retrieve-factoid fact))))
+
+       ;; tell the bot to quit
        (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
        "QUIT"
        :else ;; default
