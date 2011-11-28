@@ -147,7 +147,7 @@
       (write conn (str "NICK " (:nick user)))
       (write conn (str "USER " (:nick user) " 0 * :" (:name user)))
       (write conn (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd))
-      (map (fn [chan] (write conn (str "JOIN " chan))) channels))
+      (apply (fn [chan] (write conn (str "JOIN " chan))) channels))
 
 ;; main entry point from command-line
  (defn -main [& args]
