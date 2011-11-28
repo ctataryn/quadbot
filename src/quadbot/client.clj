@@ -30,6 +30,11 @@
              (.println (str msg "\r"))
              (.flush)))
 
+ ;;writes mulitple messages to the IRC server
+ (defn writeMultiple [conn messages]
+  (let [vecparam (if (vector? messages) messages (vector messages))] 
+    (doseq [msg vecparam] (write conn msg))))
+
  ;;takes an incomming message and parses it out into it's aggregates
  (defn parseMsg [msg]
     (zipmap [:user :channel :message] (rest (re-find #"^:(.*)!.*\sPRIVMSG\s(.*)\s:(.*)$" msg))))
@@ -80,8 +85,11 @@
        ;; retrieve a factoid
        (re-matches #"^[^\s]+$" msg)
        (let [matches (re-find #"^([^\s]+)$" msg)
-             fact (second matches) ]
-         (createMsg msgMap (:ANSWER (dao/retrieve-factoid fact))))
+             fact (second matches)
+             response (:ANSWER (dao/retrieve-factoid fact))]
+         (if (empty? response)
+            (createMention msgMap "Sorry, I didn't gr0k what you said...")
+            (createMsg msgMap response)))
        ;;should have a way to tell if a factoid doesn't exist and then respond with the :else below
 
        ;; delete a factoid
@@ -100,11 +108,13 @@
 
        ;; tell the bot to quit
        (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
-       "QUIT"
+       [(createMention msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
+        "QUIT"]
 
        ;; tell the bot to leave the chan
        (and (isAdmin? (:user msgMap)) (re-matches #"^please leave$" msg))
-       (str "PART " (:channel msgMap))
+       [(createMention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
+        (str "PART " (:channel msgMap))]
 
        :else ;; default
        (createMention msgMap "Sorry, I didn't gr0k what you said..."))))
@@ -114,7 +124,7 @@
 ;;
  (defn messageHandler [conn msgMap]
    ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
-  (write conn (cond
+  (writeMultiple conn (cond
       ;;add more actions here, for when the bot isn't specifically mentioned in a message
       ;;
       ;;If the bot was specifically mentioned, the cmdprefix was used or the bot was /msg'd then 
@@ -144,10 +154,11 @@
                              (write conn (str "PONG "  (re-find #":.*" msg)))))))
 
  (defn login [conn user nickservpwd channels]
-      (write conn (str "NICK " (:nick user)))
-      (write conn (str "USER " (:nick user) " 0 * :" (:name user)))
-      (write conn (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd))
-      (apply (fn [chan] (write conn (str "JOIN " chan))) channels))
+      (writeMultiple conn [
+                            (str "NICK " (:nick user))
+                            (str "USER " (:nick user) " 0 * :" (:name user))
+                            (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd)])
+      (doseq [chan channels] (write conn (str "JOIN " chan))))
 
 ;; main entry point from command-line
  (defn -main [& args]
