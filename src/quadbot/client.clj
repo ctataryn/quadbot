@@ -5,8 +5,7 @@
       (:require [quadbot.persistence :as dao]))
    
  (def freenode {:name "irc.freenode.net" :port 6667})
- (def user {:name "#quadron bot" :nick "quadbot" :join "#test-cwt"})
- (def admins #{"ThaDon"})
+ (def user {:name "#quadron bot" :nick "quadbot"}) (def admins #{"ThaDon"})
  (def cmdprefix "~")
 
  (declare conn-handler)
@@ -88,9 +87,20 @@
              fact (second matches)
              response (:ANSWER (dao/retrieve-factoid fact))]
          (if (empty? response)
-            (createMention msgMap "Sorry, I didn't gr0k what you said...")
+            (createMention msgMap (str "Sorry, I don't know about " fact))
             (createMsg msgMap response)))
-       ;;should have a way to tell if a factoid doesn't exist and then respond with the :else below
+
+       ;; Like the factoid retrieval but actually mentions the person 
+       ;; usage: ~tell someNick about fact
+       ;; reponse: someNick: fact is answer
+       (re-matches #"^tell\s[^\s]+\sabout\s[^\s]+$" msg)
+       (let [matches (re-find #"^tell\s([^\s]+)\sabout\s([^\s]+)$" msg)
+             who (second matches)
+             fact (last matches)
+             response (:ANSWER (dao/retrieve-factoid fact))]
+         (if (empty? response)
+           (createMention msgMap (str "Sorry, I don't know about " fact))
+           (createMention {:user who :channel (:channel msgMap)} (str fact " is " response))))
 
        ;; delete a factoid
        (and (isAdmin? (:user msgMap)) (re-matches #"^forget\s([^\s]+)$" msg))
@@ -104,7 +114,8 @@
        (and (isAdmin? (:user msgMap)) (re-matches #"^join\s#([^\s]*)$" msg))
        (let [matches (re-find #"^join\s#([^\s]*)$" msg)
              chan (second matches)]
-           (str "JOIN #" chan))
+           [(str "JOIN #" chan)
+            (createMsg {:user (:user msgMap) :channel (str "#" chan)} (str "Hi, I was asked to join this channel by " (:user msgMap)))])
 
        ;; tell the bot to quit
        (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
