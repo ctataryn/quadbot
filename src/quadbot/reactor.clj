@@ -1,6 +1,7 @@
  (ns quadbot.reactor
       (:use quadbot.utils.reactor)
       (:use quadbot.config.client)
+      (:require [clojure.string :as str])
       (:require [quadbot.persistence :as dao]))
 
  (declare react-to-factoid-set)
@@ -85,24 +86,24 @@
 ;;
  (defn react-to-factoid-set [msgMap fact definition]
   (do
-    (dao/insert-factoid (:user msgMap) fact definition)
+    (dao/insert-factoid (:user msgMap) (str/lower-case fact) definition)
     (create-mention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
 
  (defn react-to-factoid-get [msgMap fact]
-   (let [response (:ANSWER (dao/retrieve-factoid fact))]
+   (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
      (if (empty? response)
               (create-mention msgMap (str "Sorry, I don't know about " fact))
               (create-msg msgMap response))))
 
  (defn react-to-tell [msgMap who fact]
-   (let [response (:ANSWER (dao/retrieve-factoid fact))]
+   (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
     (if (empty? response)
       (create-mention msgMap (str "Sorry, I don't know about " fact))
       (create-mention {:user who :channel (:channel msgMap)} (str fact " is " response)))))
 
  (defn react-to-forget [msgMap fact]
    (do
-     (dao/delete-factoid fact)
+     (dao/delete-factoid (str/lower-case fact))
      (create-mention msgMap (str "What's '" fact "'? ;)"))))
 
  (defn react-to-join [msgMap chan]
