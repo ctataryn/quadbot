@@ -3,7 +3,13 @@
       (:use quadbot.config.client)
       (:require [quadbot.persistence :as dao]))
 
- ;;TODO take each reaction and make it it's own function
+ (declare react-to-factoid-set)
+ (declare react-to-factoid-get)
+ (declare react-to-tell)
+ (declare react-to-forget)
+ (declare react-to-join)
+ (declare react-to-quit)
+ (declare react-to-leave)
 
  ;;add more condition branches to this method in order to react to messages targeted at quadbot
  ;;from a user who either mentioned quadbot or used the cmdPrefix
@@ -18,18 +24,13 @@
        (let [matches (re-find #"^([^\s]+)\sis\s(.+)$" msg)
              fact (second matches)
              definition (nth matches 2)]
-         (do
-           (dao/insert-factoid (:user msgMap) fact definition)
-           (createMention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
+         (react-to-factoid-set msgMap fact definition))
 
        ;; retrieve a factoid
        (re-matches #"^[^\s]+$" msg)
        (let [matches (re-find #"^([^\s]+)$" msg)
-             fact (second matches)
-             response (:ANSWER (dao/retrieve-factoid fact))]
-         (if (empty? response)
-            (createMention msgMap (str "Sorry, I don't know about " fact))
-            (createMsg msgMap response)))
+             fact (second matches)]
+         (react-to-factoid-get msgMap fact))
 
        ;; Like the factoid retrieval but actually mentions the person 
        ;; usage: ~tell someNick about fact
@@ -37,37 +38,65 @@
        (re-matches #"^tell\s[^\s]+\sabout\s[^\s]+$" msg)
        (let [matches (re-find #"^tell\s([^\s]+)\sabout\s([^\s]+)$" msg)
              who (second matches)
-             fact (last matches)
-             response (:ANSWER (dao/retrieve-factoid fact))]
-         (if (empty? response)
-           (createMention msgMap (str "Sorry, I don't know about " fact))
-           (createMention {:user who :channel (:channel msgMap)} (str fact " is " response))))
+             fact (last matches)]
+         (react-to-tell msgMap who fact))
 
        ;; delete a factoid
        (and (isAdmin? (:user msgMap)) (re-matches #"^forget\s([^\s]+)$" msg))
        (let [matches (re-find #"^forget\s([^\s]+)$" msg)
              fact (second matches)]
-         (do
-           (dao/delete-factoid fact)
-           (createMention msgMap (str "What's '" fact "'? ;)"))))
+         (react-to-forget msgMap fact))
 
        ;; ask quadbot to join another channel
        (and (isAdmin? (:user msgMap)) (re-matches #"^join\s#([^\s]*)$" msg))
        (let [matches (re-find #"^join\s#([^\s]*)$" msg)
              chan (second matches)]
-           [(str "JOIN #" chan)
-            (createMsg {:user (:user msgMap) :channel (str "#" chan)} (str "Hi, I was asked to join this channel by " (:user msgMap)))])
+           (react-to-join msgMap chan))
 
        ;; tell the bot to quit
        (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
-       [(createMention msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
-        "QUIT"]
+       (react-to-quit msgMap)
 
        ;; tell the bot to leave the chan
        (and (isAdmin? (:user msgMap)) (re-matches #"^please leave$" msg))
-       [(createMention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
-        (str "PART " (:channel msgMap))]
+       (react-to-leave msgMap)
 
        :else ;; default
        (createMention msgMap "Sorry, I didn't gr0k what you said..."))))
 
+;;
+;; reaction functions below
+;;
+ (defn react-to-factoid-set [msgMap fact definition]
+  (do
+    (dao/insert-factoid (:user msgMap) fact definition)
+    (createMention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
+
+ (defn react-to-factoid-get [msgMap fact]
+   (let [response (:ANSWER (dao/retrieve-factoid fact))]
+     (if (empty? response)
+              (createMention msgMap (str "Sorry, I don't know about " fact))
+              (createMsg msgMap response))))
+
+ (defn react-to-tell [msgMap who fact]
+   (let [response (:ANSWER (dao/retrieve-factoid fact))]
+    (if (empty? response)
+      (createMention msgMap (str "Sorry, I don't know about " fact))
+      (createMention {:user who :channel (:channel msgMap)} (str fact " is " response)))))
+
+ (defn react-to-forget [msgMap fact]
+   (do
+     (dao/delete-factoid fact)
+     (createMention msgMap (str "What's '" fact "'? ;)"))))
+
+ (defn react-to-join [msgMap chan]
+  [(str "JOIN #" chan)
+   (createMsg {:user (:user msgMap) :channel (str "#" chan)} (str "Hi, I was asked to join this channel by " (:user msgMap)))])
+
+ (defn react-to-quit [msgMap]
+   [(createMention msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
+    "QUIT"])
+
+ (defn react-to-leave [msgMap]
+   [(createMention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
+    (str "PART " (:channel msgMap))])
