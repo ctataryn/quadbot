@@ -14,7 +14,7 @@
  ;;add more condition branches to this method in order to react to messages targeted at quadbot
  ;;from a user who either mentioned quadbot or used the cmdPrefix
  (defn reactToMsg [msgMap]
-   (let [msg (.trim (stripCmdPrefix (stripUser (.trim (:message msgMap)))))]
+   (let [msg (.trim (strip-cmd-prefix (strip-user (.trim (:message msgMap)))))]
      (println (str "MSG AFTER STRIPPING: " msg))
      (cond
        ;; parse a command out of msg and return something to write out to the client
@@ -42,27 +42,27 @@
          (react-to-tell msgMap who fact))
 
        ;; delete a factoid
-       (and (isAdmin? (:user msgMap)) (re-matches #"^forget\s([^\s]+)$" msg))
+       (and (admin? (:user msgMap)) (re-matches #"^forget\s([^\s]+)$" msg))
        (let [matches (re-find #"^forget\s([^\s]+)$" msg)
              fact (second matches)]
          (react-to-forget msgMap fact))
 
        ;; ask quadbot to join another channel
-       (and (isAdmin? (:user msgMap)) (re-matches #"^join\s#([^\s]*)$" msg))
+       (and (admin? (:user msgMap)) (re-matches #"^join\s#([^\s]*)$" msg))
        (let [matches (re-find #"^join\s#([^\s]*)$" msg)
              chan (second matches)]
            (react-to-join msgMap chan))
 
        ;; tell the bot to quit
-       (and (isAdmin? (:user msgMap)) (re-matches #"^please quit$" msg))
+       (and (admin? (:user msgMap)) (re-matches #"^please quit$" msg))
        (react-to-quit msgMap)
 
        ;; tell the bot to leave the chan
-       (and (isAdmin? (:user msgMap)) (re-matches #"^please leave$" msg))
+       (and (admin? (:user msgMap)) (re-matches #"^please leave$" msg))
        (react-to-leave msgMap)
 
        :else ;; default
-       (createMention msgMap "Sorry, I didn't gr0k what you said..."))))
+       (create-mention msgMap "Sorry, I didn't gr0k what you said..."))))
 
 ;;
 ;; reaction functions below
@@ -70,33 +70,33 @@
  (defn react-to-factoid-set [msgMap fact definition]
   (do
     (dao/insert-factoid (:user msgMap) fact definition)
-    (createMention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
+    (create-mention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
 
  (defn react-to-factoid-get [msgMap fact]
    (let [response (:ANSWER (dao/retrieve-factoid fact))]
      (if (empty? response)
-              (createMention msgMap (str "Sorry, I don't know about " fact))
-              (createMsg msgMap response))))
+              (create-mention msgMap (str "Sorry, I don't know about " fact))
+              (create-msg msgMap response))))
 
  (defn react-to-tell [msgMap who fact]
    (let [response (:ANSWER (dao/retrieve-factoid fact))]
     (if (empty? response)
-      (createMention msgMap (str "Sorry, I don't know about " fact))
-      (createMention {:user who :channel (:channel msgMap)} (str fact " is " response)))))
+      (create-mention msgMap (str "Sorry, I don't know about " fact))
+      (create-mention {:user who :channel (:channel msgMap)} (str fact " is " response)))))
 
  (defn react-to-forget [msgMap fact]
    (do
      (dao/delete-factoid fact)
-     (createMention msgMap (str "What's '" fact "'? ;)"))))
+     (create-mention msgMap (str "What's '" fact "'? ;)"))))
 
  (defn react-to-join [msgMap chan]
   [(str "JOIN #" chan)
-   (createMsg {:user (:user msgMap) :channel (str "#" chan)} (str "Hi, I was asked to join this channel by " (:user msgMap)))])
+   (create-msg {:user (:user msgMap) :channel (str "#" chan)} (str "Hi, I was asked to join this channel by " (:user msgMap)))])
 
  (defn react-to-quit [msgMap]
-   [(createMention msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
+   [(create-mention msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
     "QUIT"])
 
  (defn react-to-leave [msgMap]
-   [(createMention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
+   [(create-mention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
     (str "PART " (:channel msgMap))])

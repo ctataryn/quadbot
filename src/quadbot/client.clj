@@ -24,7 +24,7 @@
              (.flush)))
 
  ;;writes mulitple messages to the IRC server
- (defn writeMultiple [conn messages]
+ (defn write-multiple [conn messages]
   (let [vecparam (if (vector? messages) messages (vector messages))] 
     (doseq [msg vecparam] (write conn msg))))
 
@@ -35,9 +35,9 @@
 ;;
 ;; Decides on an appropriate handler, and writes the handler's output to the connection
 ;;
- (defn messageHandler [conn msgMap]
+ (defn message-handler [conn msgMap]
    ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
-  (writeMultiple conn (cond
+  (write-multiple conn (cond
       ;;add more actions here, for when the bot isn't specifically mentioned in a message
       ;;
       ;;If the bot was specifically mentioned, the cmdprefix was used or the bot was /msg'd then 
@@ -62,12 +62,12 @@
                              (re-find #"^ERROR :Closing Link:" msg) 
                              (dosync (alter conn merge {:exit true}))
                              (re-find #":.*\sPRIVMSG\s.*" msg)
-                             (messageHandler conn (parseMsg msg))
+                             (message-handler conn (parseMsg msg))
                              (re-find #"^PING" msg)
                              (write conn (str "PONG "  (re-find #":.*" msg)))))))
 
  (defn login [conn user nickservpwd channels]
-      (writeMultiple conn [
+      (write-multiple conn [
                             (str "NICK " (:nick user))
                             (str "USER " (:nick user) " 0 * :" (:name user))
                             (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd)])
