@@ -26,6 +26,15 @@
              definition (nth matches 2)]
          (react-to-factoid-set msgMap fact definition))
 
+       ;; retrieve help for a command
+       ;; note this needs to go before the factoid retrieval
+       (re-matches #"^help\s*[^\s]*$" msg)
+       (let [matches (re-find #"^help\s*([^\s]*)$" msg)
+             fact (second matches)]
+         (if (empty? fact)
+         (react-to-factoid-get msgMap "help:help")
+         (react-to-factoid-get msgMap (str "help:" fact))))
+
        ;; retrieve a factoid
        (re-matches #"^[^\s]+$" msg)
        (let [matches (re-find #"^([^\s]+)$" msg)
@@ -52,7 +61,14 @@
        (let [matches (re-find #"^join\s#([^\s]*)$" msg)
              chan (second matches)]
            (react-to-join msgMap chan))
-
+ 
+       ;; set help for a command
+       (and (admin? (:user msgMap)) (re-matches #"^help\s[^\s]+\sis\s.+$" msg))
+       (let [matches (re-find #"^help\s([^\s]+)\sis\s(.+)$" msg)
+             fact (second matches)
+             definition (nth matches 2)]
+         (react-to-factoid-set msgMap (str "help:" fact) definition))
+       
        ;; tell the bot to quit
        (and (admin? (:user msgMap)) (re-matches #"^please quit$" msg))
        (react-to-quit msgMap)
@@ -100,3 +116,26 @@
  (defn react-to-leave [msgMap]
    [(create-mention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
     (str "PART " (:channel msgMap))])
+
+
+;;
+;; Use this initialization function before starting quadbot up for the first time
+;;
+ (defn init-quadbot []
+   (do
+     (let [factoids {
+           "help:help" "type: \"~help [command]\" for details on how to use each command.  Type \"~help commands\" for a listing of commands available"
+           "help:commands" "get-factoid, set-factoid, tell-factoid, quit, leave, join, help"
+           "help:get-factoid" "~fact - retrieves a factoid if fact exists"
+           "help:set-factoid" "~fact is answer - sets a factoid to a specific answer, overwritting any previous fact"
+           "help:tell-factoid" "~tell user about fact - same as get-factoid except it directs the factoid at a specific user"
+           "help:quit" "~please quit - asks quadbot to quit IRC if the user issuing the command is an Admin"
+           "help:leave" "~please leave - asks quadbot to leave the channel the command was issued in if the user issuing the command is an Admin"
+           "help:join" "~join #channel - asks quadbot to join a channel if the user issuing the command is an Admin"
+           "ping" "pong"
+           "tl;dr" "Too long;didn't read"
+           "hi" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"
+           "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"}]
+     (dao/invoke-with-connection dao/create-tables)
+     (doseq [entry factoids]
+       (react-to-factoid-set {:user "quadbot"} (key entry) (val entry))))))

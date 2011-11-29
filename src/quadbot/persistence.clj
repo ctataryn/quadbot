@@ -14,7 +14,7 @@
 (defentity factoid)
 
 (defn create-tables
-  "Create a users table"
+  "Create a factoid table"
   []
   (do 
     (sql/create-table
@@ -40,7 +40,6 @@
 ;; Invokes a function with a connection inside a transaction
 ;; (invoke-with-connection drop-tables)
 ;; (invoke-with-connection create-tables)
-;; (def ident (invoke-with-connection #(insert-factoid "ThaDon" "bleh" "blarg")))
 (defn invoke-with-connection [f]
   (sql/with-connection
      dbspec
