@@ -1,9 +1,17 @@
  (ns quadbot.utils.reactor
    (:use quadbot.config.client))
 
- ;; checks to see if the user passed in is an Admin
- (defn admin? [userName]
-   (not (empty? (admins userName))))
+ ;;takes an incomming message and parses it out into it's aggregates
+ (defn parseMsg [msg]
+    (zipmap [:user :channel :auth :message] (rest (re-find #"^:(.*)!.*\sPRIVMSG\s(.*)\s:(\+|-)(.*)$" msg))))
+
+ ;; checks to see if the user who sent the message has authed to NickServ
+ (defn authed? [msgMap]
+   (= (:auth msgMap) "+"))
+
+ ;; checks to see if the user passed who sent the message is an Admin
+ (defn admin? [msgMap]
+   (and (authed? msgMap) (not (empty? (admins (:user msgMap))))))
 
  ;;strips the quadbot username from the front of a message
  (defn strip-user [msg]

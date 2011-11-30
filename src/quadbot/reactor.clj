@@ -71,30 +71,30 @@
          (react-to-tell msgMap who fact))
 
        ;; delete a factoid
-       (and (admin? (:user msgMap)) (re-matches #"^forget\s([^\s]+)$" msg))
+       (and (admin? msgMap) (re-matches #"^forget\s([^\s]+)$" msg))
        (let [matches (re-find #"^forget\s([^\s]+)$" msg)
              fact (second matches)]
          (react-to-forget msgMap fact))
 
        ;; ask quadbot to join another channel
-       (and (admin? (:user msgMap)) (re-matches #"^join\s#([^\s]*)$" msg))
+       (and (admin? msgMap) (re-matches #"^join\s#([^\s]*)$" msg))
        (let [matches (re-find #"^join\s#([^\s]*)$" msg)
              chan (second matches)]
            (react-to-join msgMap chan))
  
        ;; set help for a command
-       (and (admin? (:user msgMap)) (re-matches #"^help\s[^\s]+\sis\s.+$" msg))
+       (and (admin? msgMap) (re-matches #"^help\s[^\s]+\sis\s.+$" msg))
        (let [matches (re-find #"^help\s([^\s]+)\sis\s(.+)$" msg)
              fact (second matches)
              definition (nth matches 2)]
          (react-to-factoid-set msgMap (str "help:" fact) definition))
        
        ;; tell the bot to quit
-       (and (admin? (:user msgMap)) (re-matches #"^please quit$" msg))
+       (and (admin? msgMap) (re-matches #"^please quit$" msg))
        (react-to-quit msgMap)
 
        ;; tell the bot to leave the chan
-       (and (admin? (:user msgMap)) (re-matches #"^please leave$" msg))
+       (and (admin? msgMap) (re-matches #"^please leave$" msg))
        (react-to-leave msgMap)
 
        :else ;; default
@@ -104,7 +104,7 @@
 ;; reaction functions below
 ;;
  (defn react-to-factoid-set [msgMap fact definition]
-  (if (and (not (admin? (:user msgMap))) (factoids fact))
+  (if (and (not (admin? msgMap)) (factoids fact))
     (create-mention msgMap (str "Sorry, " (:user msgMap) " that factoid has been locked"))
     (do 
       (dao/insert-factoid (:user msgMap) (str/lower-case fact) definition)

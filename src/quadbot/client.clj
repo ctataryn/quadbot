@@ -3,10 +3,10 @@
                (java.io PrintWriter InputStreamReader BufferedReader))
       (:use clojure.contrib.command-line)
       (:use quadbot.reactor)
+      (:use quadbot.utils.reactor)
       (:use quadbot.config.client))
 
  (declare conn-handler)
-
 
  ;;connects to the IRC server
  (defn connect [server]
@@ -27,10 +27,6 @@
  (defn write-multiple [conn messages]
   (let [vecparam (if (vector? messages) messages (vector messages))] 
     (doseq [msg vecparam] (write conn msg))))
-
- ;;takes an incomming message and parses it out into it's aggregates
- (defn parseMsg [msg]
-    (zipmap [:user :channel :message] (rest (re-find #"^:(.*)!.*\sPRIVMSG\s(.*)\s:(.*)$" msg))))
 
 ;;
 ;; Decides on an appropriate handler, and writes the handler's output to the connection
@@ -70,7 +66,8 @@
       (write-multiple conn [
                             (str "NICK " (:nick user))
                             (str "USER " (:nick user) " 0 * :" (:name user))
-                            (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd)])
+                            (str "PRIVMSG NickServ :IDENTIFY " (:nick user) " " nickservpwd)
+                            "CAP REQ IDENTIFY-MSG"])
       (doseq [chan channels] (write conn (str "JOIN " chan))))
 
 ;; main entry point from command-line
