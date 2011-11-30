@@ -150,10 +150,12 @@
            "help:get-factoid" "~fact - retrieves a factoid if fact exists"
            "help:set-factoid" "~fact is answer - sets a factoid to a specific answer, overwritting any previous fact"
            "help:tell-factoid" "~tell user about fact - same as get-factoid except it directs the factoid at a specific user"
+           "help:karma" "type: ~karma [something] to report the karma-level for [something] --- ~something++ or ~something-- to increment or decrement the karma-level for  [something] respectively"
            "help:quit" "~please quit - asks quadbot to quit IRC if the user issuing the command is an Admin"
            "help:leave" "~please leave - asks quadbot to leave the channel the command was issued in if the user issuing the command is an Admin"
            "help:join" "~join #channel - asks quadbot to join a channel if the user issuing the command is an Admin"
            "ping" "pong"
+           "features" "Thanks for the suggestion, feel free to contribute that feature here: https://github.com/ctataryn"
            "tl;dr" "Too long;didn't read"
            "hi" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"
            "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"}]
