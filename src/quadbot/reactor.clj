@@ -4,6 +4,7 @@
       (:require [clojure.string :as str])
       (:require [quadbot.persistence :as dao]))
 
+ (declare factoids)
  (declare react-to-factoid-set)
  (declare react-to-factoid-get)
  (declare react-to-tell)
@@ -103,9 +104,11 @@
 ;; reaction functions below
 ;;
  (defn react-to-factoid-set [msgMap fact definition]
-  (do
-    (dao/insert-factoid (:user msgMap) (str/lower-case fact) definition)
-    (create-msg msgMap (str "Ok " (:user msgMap) ", I'll remember about " fact))))
+  (if (and (not (admin? (:user msgMap))) (factoids fact))
+    (create-mention msgMap (str "Sorry, " (:user msgMap) " that factoid has been locked"))
+    (do 
+      (dao/insert-factoid (:user msgMap) (str/lower-case fact) definition)
+      (create-msg msgMap (str "Ok " (:user msgMap) ", I'll remember about " fact)))))
 
  (defn react-to-factoid-get [msgMap fact]
    (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
@@ -142,9 +145,7 @@
 ;;
 ;; Use this initialization function before starting quadbot up for the first time
 ;;
- (defn init-quadbot []
-   (do
-     (let [factoids {
+ (def factoids {
            "help:help" "type: \"~help [command]\" for details on how to use each command.  Type \"~help commands\" for a listing of commands available"
            "help:commands" "get-factoid, set-factoid, tell-factoid, quit, leave, join, help"
            "help:get-factoid" "~fact - retrieves a factoid if fact exists"
@@ -158,8 +159,11 @@
            "features" "Thanks for the suggestion, feel free to contribute that feature here: https://github.com/ctataryn"
            "tl;dr" "Too long;didn't read"
            "hi" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"
-           "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"}]
+           "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"})
+
+ (defn init-quadbot []
+   (do
      (dao/invoke-with-connection dao/drop-tables)
      (dao/invoke-with-connection dao/create-tables)
      (doseq [entry factoids]
-       (react-to-factoid-set {:user "quadbot"} (key entry) (val entry))))))
+       (react-to-factoid-set {:user "quadbot"} (key entry) (val entry)))))
