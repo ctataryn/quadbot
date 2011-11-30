@@ -11,6 +11,7 @@
  (declare react-to-join)
  (declare react-to-quit)
  (declare react-to-leave)
+ (declare react-to-karma)
 
  ;;add more condition branches to this method in order to react to messages targeted at quadbot
  ;;from a user who either mentioned quadbot or used the cmdPrefix
@@ -19,6 +20,23 @@
      (println (str "MSG AFTER STRIPPING: " msg))
      (cond
        ;; parse a command out of msg and return something to write out to the client
+
+       ;; report karma. Note: in it's current state, this needs to go before factoid reactors 
+       ;; or else it won't match
+       (re-matches #"^karma\s([\w]+)$" msg)
+       (let [matches (re-find #"^karma\s([\w]+)$" msg)
+             what (second matches)]
+           (react-to-karma msgMap what (fn [what] what)))
+
+       ;; increment or decrement karma. Note: in it's current state, this needs to go before factoid reactors 
+       ;; or else it won't match
+       (re-matches #"^[\w]+(\+\+|--)$" msg)
+       (let [matches (re-find #"^([\w]+)(\+\+|--)$" msg)
+             what (second matches)
+             op   (last matches)]
+         (if (= op "++")
+           (react-to-karma msgMap what inc)
+           (react-to-karma msgMap what dec)))
 
        ;; check if they are trying to add a factoid
        (re-matches #"^[^\s]+\sis\s.+$" msg)
@@ -87,7 +105,7 @@
  (defn react-to-factoid-set [msgMap fact definition]
   (do
     (dao/insert-factoid (:user msgMap) (str/lower-case fact) definition)
-    (create-mention msgMap (str "Ok " (:user msgMap) " I'll remember about " fact))))
+    (create-msg msgMap (str "Ok " (:user msgMap) ", I'll remember about " fact))))
 
  (defn react-to-factoid-get [msgMap fact]
    (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
@@ -99,7 +117,7 @@
    (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
     (if (empty? response)
       (create-mention msgMap (str "Sorry, I don't know about " fact))
-      (create-mention {:user who :channel (:channel msgMap)} (str fact " is " response)))))
+      (create-mention {:user who :channel (:channel msgMap)} response))))
 
  (defn react-to-forget [msgMap fact]
    (do
@@ -111,13 +129,15 @@
    (create-msg {:user (:user msgMap) :channel (str "#" chan)} (str "Hi, I was asked to join this channel by " (:user msgMap)))])
 
  (defn react-to-quit [msgMap]
-   [(create-mention msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
+   [(create-msg msgMap "So long, farewell, auf Wiedersehen, goodbye...") 
     "QUIT"])
 
  (defn react-to-leave [msgMap]
    [(create-mention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
     (str "PART " (:channel msgMap))])
 
+ (defn react-to-karma [msgMap what f]
+     (create-msg msgMap (str what " has a karma level of " (dao/do-with-karma what f) ", " (:user msgMap))))
 
 ;;
 ;; Use this initialization function before starting quadbot up for the first time
@@ -137,6 +157,7 @@
            "tl;dr" "Too long;didn't read"
            "hi" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"
            "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"}]
+     (dao/invoke-with-connection dao/drop-tables)
      (dao/invoke-with-connection dao/create-tables)
      (doseq [entry factoids]
        (react-to-factoid-set {:user "quadbot"} (key entry) (val entry))))))

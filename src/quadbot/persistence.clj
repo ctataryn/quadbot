@@ -12,6 +12,7 @@
 
 (defdb mydb dbspec)
 (defentity factoid)
+(defentity karma)
 
 (defn create-tables
   "Create a factoid table"
@@ -24,8 +25,14 @@
       [:fact        "VARCHAR(255)"]
       [:answer      "VARCHAR"]
       [:created_on  "TIMESTAMP" "NOT NULL" "DEFAULT CURRENT_TIMESTAMP"])
-   (sql/do-commands "CREATE INDEX FACTIDX ON factoid(fact)")))
-
+    (sql/do-commands "CREATE INDEX FACTIDX ON factoid(fact)")
+    (sql/create-table
+      "karma"
+      [:id          "IDENTITY" "NOT NULL" "PRIMARY KEY"]
+      [:what        "VARCHAR(255)"]
+      [:value       "INT"])
+    (sql/do-commands "CREATE INDEX KARMAIDX ON karma(what)")))
+    
 (defn drop-tables
   "Drop factoid table"
   []
@@ -60,3 +67,21 @@
 (defn retrieve-factoid [fact]
   (first (invoke-with-connection #(select factoid (where {:fact [= fact]}) (order :created_on :DESC)))))
 
+
+ (defn do-with-karma [what f]
+  (invoke-with-connection 
+      #(let [result (select karma (fields :value) (where {:what [= what]}))
+             value (if (empty? result) 0 (:VALUE (first result)))]
+         (if (empty? result)
+           (insert karma (values {:what what :value 0}))
+           (let [newval (f value)]
+             (update karma
+                    (set-fields {:value newval})
+                    (where {:what [= what]}))
+             newval)))))
+
+ (defn increment-karma [what]
+  (do-with-karma what inc))
+
+ (defn decrement-karma [what]
+  (do-with-karma what dec))
