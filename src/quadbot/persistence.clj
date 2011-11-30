@@ -71,14 +71,14 @@
  (defn do-with-karma [what f]
   (invoke-with-connection 
       #(let [result (select karma (fields :value) (where {:what [= what]}))
-             value (if (empty? result) 0 (:VALUE (first result)))]
+             value (if (empty? result) 0 (:VALUE (first result)))
+             newval (f value)]
          (if (empty? result)
-           (insert karma (values {:what what :value 0}))
-           (let [newval (f value)]
-             (update karma
+            (insert karma (values {:what what :value newval}))
+            (update karma
                     (set-fields {:value newval})
-                    (where {:what [= what]}))
-             newval)))))
+                    (where {:what [= what]}))) 
+         newval)))
 
  (defn increment-karma [what]
   (do-with-karma what inc))
