@@ -2,6 +2,8 @@
       (:use [korma.db])
       (:use [korma.core])
       (:use [clojure.test])
+      (:require [clj-time.core :as date])
+      (:require [clj-time.coerce :as dateconv])
       (:require [clojure.java.jdbc :as sql]))
 
 (def dbspec  {:classname   "org.h2.Driver" 
@@ -13,6 +15,7 @@
 (defdb mydb dbspec)
 (defentity factoid)
 (defentity karma)
+(defentity karma-hist (table :karma_hist))
 
 (defn create-tables
   "Create a factoid table"
@@ -28,9 +31,12 @@
     (sql/do-commands "CREATE INDEX FACTIDX ON factoid(fact)")
     (sql/create-table
       "karma"
-      [:id          "IDENTITY" "NOT NULL" "PRIMARY KEY"]
-      [:what        "VARCHAR(255)"]
-      [:value       "INT"])
+      [:id              "IDENTITY" "NOT NULL" "PRIMARY KEY"]
+      [:what            "VARCHAR(255)"] ;; the thing that this karma-level applies to
+      [:who             "VARCHAR(255)"] ;; person who last updated this karma
+      [:value           "INT"]          ;; karma-level
+      [:last_direction  "CHAR(2)"]      ;; either '++' or '--' to indicate the last karma action was a increment or decrement
+      [:updated_on      "TIMESTAMP" "NOT NULL" "DEFAULT CURRENT_TIMESTAMP"])
     (sql/do-commands "CREATE INDEX KARMAIDX ON karma(what)")))
     
 (defn drop-tables
@@ -70,20 +76,34 @@
   (first (invoke-with-connection #(select factoid (where {:fact [= fact]}) (order :created_on :DESC)))))
 
 
- (defn do-with-karma [what f]
+ (defn get-now []
+   (java.sql.Timestamp. (.getTime (java.util.Date.))))
+
+ (defn do-with-karma [who what f]
   (invoke-with-connection 
       #(let [result (select karma (fields :value) (where {:what [= what]}))
              value (if (empty? result) 0 (:VALUE (first result)))
-             newval (f value)]
+             newval (f value)
+             direction (if (< newval value) "--" "++")] ;;set the direciton of the karma boost
+         (if (not (= value newval)) ;; if the new value is the same as the old one, no need to update karma at all
+           (if (empty? result) ;; did karma exist for this thing before?
+              (insert karma (values {:who who :what what :value newval :last_direction direction})) ;;if not, create a karma row
+              (update karma ;;otherwise, just update the existing value
+                      (set-fields {:who who :value newval :last_direction direction :updated_on (get-now)})
+                      (where {:what [= what]}))))
+           newval))) ;;return the newval
+
+ (defn increment-karma [who what]
+  (do-with-karma who what inc))
+
+ (defn decrement-karma [who what]
+  (do-with-karma who what dec))
+
+ ;;returns, the last time a user updated a certain karma-level (in UTC)
+ (defn last-karma-time [who what]
+    (invoke-with-connection 
+      #(let [result (select karma (fields :updated_on) (where {:what [= what] :who [= who]}))]
          (if (empty? result)
-            (insert karma (values {:what what :value newval}))
-            (update karma
-                    (set-fields {:value newval})
-                    (where {:what [= what]}))) 
-         newval)))
+           (date/date-time 1975 04 27)
+           (date/to-time-zone (dateconv/from-long (. (:UPDATED_ON (first result)) getTime)) date/utc)))))
 
- (defn increment-karma [what]
-  (do-with-karma what inc))
-
- (defn decrement-karma [what]
-  (do-with-karma what dec))

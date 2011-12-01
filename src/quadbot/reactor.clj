@@ -2,6 +2,7 @@
       (:use quadbot.utils.reactor)
       (:use quadbot.config.client)
       (:require [clojure.string :as str])
+      (:require [clj-time.core :as date])
       (:require [quadbot.persistence :as dao]))
 
  (declare factoids)
@@ -140,7 +141,11 @@
     (str "PART " (:channel msgMap))])
 
  (defn react-to-karma [msgMap what f]
-     (create-msg msgMap (str what " has a karma level of " (dao/do-with-karma what f) ", " (:user msgMap))))
+   (if (= what (:user msgMap))
+     (create-mention msgMap "fap...fap...fap...")
+     (if (date/before? (date/now) (date/plus (dao/last-karma-time (:user msgMap) what) (date/minutes 1))) ;; trying to change karma too quickly?
+       (create-mention msgMap "Whoa there, give your fingers a rest for a while...")
+       (create-msg msgMap (str what " has a karma level of " (dao/do-with-karma (:user msgMap) what f) ", " (:user msgMap))))))
 
 ;;
 ;; Use this initialization function before starting quadbot up for the first time

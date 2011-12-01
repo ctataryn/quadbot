@@ -5,4 +5,5 @@
                  [com.h2database/h2 "1.3.161"]
                  [korma "0.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
+                 [clj-time "0.3.3"]
                  [org.clojure/java.jdbc "0.1.1"]])
