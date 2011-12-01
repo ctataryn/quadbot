@@ -181,6 +181,7 @@
            "ping" "pong"
            "features" "Thanks for the suggestion, feel free to contribute that feature here: https://github.com/ctataryn"
            "tl;dr" "Too long;didn't read"
+           "tias" "Instead of asking, just Try It And See"
            "hi" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"
            "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"})
 
