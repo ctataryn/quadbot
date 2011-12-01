@@ -172,4 +172,4 @@
      (dao/invoke-with-connection dao/drop-tables)
      (dao/invoke-with-connection dao/create-tables)
      (doseq [entry factoids]
-       (react-to-factoid-set {:user "quadbot"} (key entry) (val entry)))))
+       (react-to-factoid-set {:user "quadbot" :auth "+"} (key entry) (val entry)))))

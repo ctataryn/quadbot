@@ -3,6 +3,6 @@
 
  (def freenode {:name "irc.freenode.net" :port 6667})
  (def user {:name "#quadron bot" :nick "quadbot"})
- (def admins #{"ThaDon"})
+ (def admins #{"ThaDon" "quadbot"})
  (def cmdprefix "~")
 
