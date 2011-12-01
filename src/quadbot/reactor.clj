@@ -143,7 +143,8 @@
  (defn react-to-karma [msgMap what f]
    (if (= what (:user msgMap))
      (create-mention msgMap "fap...fap...fap...")
-     (if (date/before? (date/now) (date/plus (dao/last-karma-time (:user msgMap) what) (date/minutes 1))) ;; trying to change karma too quickly?
+      ;; trying to change karma too quickly? Allow them only once per minute
+     (if (date/before? (date/now) (date/plus (dao/last-karma-time (:user msgMap) what) (date/minutes 1)))
        (create-mention msgMap "Whoa there, give your fingers a rest for a while...")
        (create-msg msgMap (str what " has a karma level of " (dao/do-with-karma (:user msgMap) what f) ", " (:user msgMap))))))
 
