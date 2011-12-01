@@ -98,11 +98,8 @@
  (defn decrement-karma [who what]
   (do-with-karma who what dec))
 
- ;;returns, the last time a user updated a certain karma-level (in UTC)
- (defn last-karma-time [who what]
+ ;;returns, the info for the last time a certain karma-level was updated
+ (defn last-karma-update [what]
     (invoke-with-connection 
-      #(let [result (select karma (fields :updated_on) (where {:what [= what] :who [= who]}))]
-         (if (empty? result)
-           (date/date-time 1975 04 27)
-           (date/to-time-zone (dateconv/from-long (. (:UPDATED_ON (first result)) getTime)) date/utc)))))
-
+      #(first (select karma (where {:what [= what] })))))
+         

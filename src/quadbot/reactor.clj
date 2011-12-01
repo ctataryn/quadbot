@@ -3,6 +3,7 @@
       (:use quadbot.config.client)
       (:require [clojure.string :as str])
       (:require [clj-time.core :as date])
+      (:require [clj-time.coerce :as dateconv])
       (:require [quadbot.persistence :as dao]))
 
  (declare factoids)
@@ -14,6 +15,7 @@
  (declare react-to-quit)
  (declare react-to-leave)
  (declare react-to-karma)
+ (declare karma-too-soon?)
 
  ;;add more condition branches to this method in order to react to messages targeted at quadbot
  ;;from a user who either mentioned quadbot or used the cmdPrefix
@@ -35,10 +37,13 @@
        (re-matches #"^[\w]+(\+\+|--)$" msg)
        (let [matches (re-find #"^([\w]+)(\+\+|--)$" msg)
              what (second matches)
-             op   (last matches)]
-         (if (= op "++")
-           (react-to-karma msgMap what inc)
-           (react-to-karma msgMap what dec)))
+             direction   (last matches)]
+         ;; same user trying to update a karma-level for something in the same direction within a minute?
+         (if (karma-too-soon? (:user msgMap) what direction)
+           (create-mention msgMap "Whoa there speedy, give your fingers a rest for a while...")
+           (if (= direction "++")
+             (react-to-karma msgMap what inc)
+             (react-to-karma msgMap what dec))))
 
        ;; check if they are trying to add a factoid
        (re-matches #"^[^\s]+\sis\s.+$" msg)
@@ -140,13 +145,25 @@
    [(create-mention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
     (str "PART " (:channel msgMap))])
 
+ ;; checks to see if this user is updating karma on something too soon after they already did
+ (defn karma-too-soon? [who what direction]
+   (let [result (dao/last-karma-update what)]
+     (if (empty? result)
+       false
+       (let [last-who (:WHO result)
+             last-update (dateconv/from-long (. (:UPDATED_ON result) getTime)) ;;get it from a TimeStamp to a DateTime, result is in UTC
+             last-direction (:LAST_DIRECTION result)]
+         (if (and  ;; were they the last person to update this karma-level? If so, same direction and less than a minute ago?
+               (date/before? (date/now) (date/plus last-update (date/minutes 1)))
+               (= last-who who)
+               (= last-direction direction))
+           true
+           false)))))
+
  (defn react-to-karma [msgMap what f]
    (if (= what (:user msgMap))
      (create-mention msgMap "fap...fap...fap...")
-      ;; trying to change karma too quickly? Allow them only once per minute
-     (if (date/before? (date/now) (date/plus (dao/last-karma-time (:user msgMap) what) (date/minutes 1)))
-       (create-mention msgMap "Whoa there, give your fingers a rest for a while...")
-       (create-msg msgMap (str what " has a karma level of " (dao/do-with-karma (:user msgMap) what f) ", " (:user msgMap))))))
+     (create-msg msgMap (str what " has a karma level of " (dao/do-with-karma (:user msgMap) what f) ", " (:user msgMap)))))
 
 ;;
 ;; Use this initialization function before starting quadbot up for the first time
