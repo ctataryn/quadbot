@@ -139,11 +139,14 @@
               interpolated-msg)))))))
 
  (defn react-to-info [msgMap fact]
-   (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
+   (let [response (dao/retrieve-factoid (str/lower-case fact))]
      (create-mention msgMap
        (if (empty? response)
         (str "Sorry, I don't know about " fact)
-         response))))
+         (let [answer (:ANSWER response)
+               created-by (:CREATED_BY response)
+               created-on (:CREATED_ON response)]
+         (str answer " -- created by: " created-by " on " created-on))))))
 
  (defn react-to-tell [msgMap who fact]
    (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
