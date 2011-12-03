@@ -10,6 +10,7 @@
  (declare react-to-factoid-set)
  (declare react-to-factoid-get)
  (declare react-to-tell)
+ (declare react-to-info)
  (declare react-to-forget)
  (declare react-to-join)
  (declare react-to-quit)
@@ -58,14 +59,8 @@
        (let [matches (re-find #"^help\s*([^\s]*)$" msg)
              fact (second matches)]
          (if (empty? fact)
-         (react-to-factoid-get msgMap "help:help")
-         (react-to-factoid-get msgMap (str "help:" fact))))
-
-       ;; retrieve a factoid
-       (re-matches #"^[^\s]+$" msg)
-       (let [matches (re-find #"^([^\s]+)$" msg)
-             fact (second matches)]
-         (react-to-factoid-get msgMap fact))
+         (react-to-factoid-get msgMap "help:help" nil)
+         (react-to-factoid-get msgMap (str "help:" fact) nil)))
 
        ;; Like the factoid retrieval but actually mentions the person 
        ;; usage: ~tell someNick about fact
@@ -75,6 +70,12 @@
              who (second matches)
              fact (last matches)]
          (react-to-tell msgMap who fact))
+       
+       ;; get the raw factoid with variables not interpolated
+       (re-matches #"^info\s[^\s]+$" msg)
+       (let [matches (re-find #"^info\s([^\s]+)$" msg)
+             fact (second matches)]
+         (react-to-info msgMap fact))
 
        ;; delete a factoid
        (and (admin? msgMap) (re-matches #"^forget\s([^\s]+)$" msg))
@@ -102,6 +103,13 @@
        ;; tell the bot to leave the chan
        (and (admin? msgMap) (re-matches #"^please leave$" msg))
        (react-to-leave msgMap)
+       
+       ;; retrieve a factoid -- generally this should be the last match as it's the greediest
+       (re-matches #"[^\s]+.*" msg)
+       (let [matches (re-seq #"[^\s]+" msg)
+             fact (first matches)
+             args (rest matches)]
+         (react-to-factoid-get msgMap fact args))
 
        :else ;; default
        (create-mention msgMap "Sorry, I didn't gr0k what you said..."))))
@@ -116,17 +124,32 @@
       (dao/insert-factoid (:user msgMap) (str/lower-case fact) definition)
       (create-msg msgMap (str "Ok " (:user msgMap) ", I'll remember about " fact)))))
 
- (defn react-to-factoid-get [msgMap fact]
+ (defn react-to-factoid-get [msgMap fact args]
    (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
      (if (empty? response)
-              (create-mention msgMap (str "Sorry, I don't know about " fact))
-              (create-msg msgMap response))))
+      (create-mention msgMap (str "Sorry, I don't know about " fact))
+      (let [arg-set (create-args-set args)]
+        (create-msg msgMap 
+          ;; the following will interpolate all ${...} with passed to the factoid
+          (let [interpolated-msg (interpolate-vars ;;interpolate ${who}
+                                    (interpolate-vars response arg-set) ;; interpolate ${1}, ${2}... ${N}
+                                  {"${who}" (:user msgMap)} )]
+            (if (re-matches #".*\$\{\w+\}.*" interpolated-msg) ;; still vars to be interpolated?
+              (str "Hmmm, I think you're missing a parameter, type ~info " fact " to find out which parameters are needed")
+              interpolated-msg)))))))
+
+ (defn react-to-info [msgMap fact]
+   (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
+     (create-mention msgMap
+       (if (empty? response)
+        (str "Sorry, I don't know about " fact)
+         response))))
 
  (defn react-to-tell [msgMap who fact]
    (let [response (:ANSWER (dao/retrieve-factoid (str/lower-case fact)))]
     (if (empty? response)
       (create-mention msgMap (str "Sorry, I don't know about " fact))
-      (create-mention {:user who :channel (:channel msgMap)} response))))
+      (create-mention {:user who :channel (:channel msgMap)} (interpolate-vars response {"${who}" who})))))
 
  (defn react-to-forget [msgMap fact]
    (do
@@ -170,10 +193,11 @@
 ;;
  (def factoids {
            "help:help" "type: \"~help [command]\" for details on how to use each command.  Type \"~help commands\" for a listing of commands available"
-           "help:commands" "get-factoid, set-factoid, tell-factoid, quit, leave, join, help"
+           "help:commands" "get-factoid, set-factoid, tell-factoid, info, quit, leave, join, help"
            "help:get-factoid" "~fact - retrieves a factoid if fact exists"
            "help:set-factoid" "~fact is answer - sets a factoid to a specific answer, overwritting any previous fact"
            "help:tell-factoid" "~tell user about fact - same as get-factoid except it directs the factoid at a specific user"
+           "help:info" "~info fact - retrieves the raw factoid without attempting argument interpolation"
            "help:karma" "type: ~karma [something] to report the karma-level for [something] --- ~something++ or ~something-- to increment or decrement the karma-level for  [something] respectively"
            "help:quit" "~please quit - asks quadbot to quit IRC if the user issuing the command is an Admin"
            "help:leave" "~please leave - asks quadbot to leave the channel the command was issued in if the user issuing the command is an Admin"
@@ -181,7 +205,7 @@
            "ping" "pong"
            "features" "Thanks for the suggestion, feel free to contribute that feature here: https://github.com/ctataryn"
            "tl;dr" "Too long;didn't read"
-           "tias" "Instead of asking, just Try It And See"
+           "tias" "Try it and see. You learn much more by experimentation than by asking without having even tried."
            "hi" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"
            "quadbot" "Hi, I'm quadbot an IRC bot written in Clojure.  Feel free to contribute to me: https://github.com/ctataryn/quadbot"})
 
