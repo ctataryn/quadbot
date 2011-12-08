@@ -20,7 +20,7 @@
 
  ;;add more condition branches to this method in order to react to messages targeted at quadbot
  ;;from a user who either mentioned quadbot or used the cmdPrefix
- (defn reactToMsg [msgMap]
+ (defn react-to-direct-message [msgMap]
    (let [msg (.trim (strip-cmd-prefix (strip-user (.trim (:message msgMap)))))]
      (println (str "MSG AFTER STRIPPING: " msg))
      (cond
@@ -113,6 +113,18 @@
 
        :else ;; default
        (create-mention msgMap "Sorry, I didn't gr0k what you said..."))))
+
+ ;;
+ ;; reacts to any message quadbot sees that isn't directed at quadbot
+ ;; 
+ (defn react-to-any-message [msgMap]
+    (let [msg (:message msgMap)]
+      (cond
+        ;;were URLs mentioned in a message?
+        (and
+          (not (= (:user msgMap) (:nick user)))  ;;quadbot urls are exceptions
+          (re-matches #"((mailto\:|(news|(ht|f)tp(s?))\://){1}\S+)" msg))
+        (let [urls (map first (re-seq #"((mailto\:|(news|(ht|f)tp(s?))\://){1}\S+)" msg))]
 
 ;;
 ;; reaction functions below

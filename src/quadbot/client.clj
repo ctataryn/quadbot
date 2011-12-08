@@ -26,28 +26,40 @@
  ;;writes mulitple messages to the IRC server
  (defn write-multiple [conn messages]
   (let [vecparam (if (vector? messages) messages (vector messages))] 
-    (doseq [msg vecparam] (write conn msg))))
+    (cond
+      (and (not (empty? vecparam) (not (empty? (first vecparam)))))
+      (doseq [msg vecparam] (write conn msg)))))
 
 ;;
 ;; Decides on an appropriate handler, and writes the handler's output to the connection
 ;;
  (defn message-handler [conn msgMap]
    ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
-  (write-multiple conn (cond
-      ;;add more actions here, for when the bot isn't specifically mentioned in a message
-      ;;
-      ;;If the bot was specifically mentioned, the cmdprefix was used or the bot was /msg'd then 
-      ;;find out what the user wants
-      ;;i.e. quadbot: fact is factoid
-      ;;Or: ~fact is factoid
-      ;;OR: /msg quadbot fact
-      (or (re-matches (re-pattern (str "^" (:nick user) ":.*")) (.trim (:message msgMap))) 
-          (re-matches (re-pattern (str "^" cmdprefix ".*")) (.trim (:message msgMap)))
-          (= (:channel msgMap) (:nick user)))
-      (let [msg (reactToMsg msgMap)]
-        (do
-          (println (str "SENT: " msg))
-           msg)))))
+  (let [msg (.trim (:message msgMap))
+        channel (:channel msgMap)
+        user (:nick user)]
+
+    (write-multiple conn (cond
+        ;;add more actions here, for when the bot isn't specifically mentioned in a message
+        ;;
+        ;;If the bot was specifically mentioned, the cmdprefix was used or the bot was /msg'd then 
+        ;;find out what the user wants
+        ;;i.e. quadbot: fact is factoid
+        ;;Or: ~fact is factoid
+        ;;OR: /msg quadbot fact
+        (or (re-matches (re-pattern (str "^" user ":.*")) msg) 
+            (re-matches (re-pattern (str "^" cmdprefix ".*")) msg)
+            (= channel user))
+        (let [response (react-to-direct-message msgMap)]
+          (do
+            (println (str "SENT: " response))
+             response))
+        (re-matches #"" msg)
+          (let [response (react-to-any-message msgMap)]
+            (do
+              (println (str "SENT: " response))
+               response))
+        ))))
 
  (defn conn-handler [conn]
       (while 

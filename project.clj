@@ -6,4 +6,5 @@
                  [korma "0.2.1"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [clj-time "0.3.3"]
+                 [clj-http "0.2.5"]
                  [org.clojure/java.jdbc "0.1.1"]])
