@@ -43,15 +43,15 @@
        (let [matches (re-find #"^([\w]+)(\+\+|--)$" msg)
              what (second matches)
              direction   (last matches)]
-       ;; Also we don't want "behind the scenes" karma medeling so no private message increments/decrements
-       (if (private-message? msgMap)
-         (create-mention msgMap "Sorry, karma cannot be manipulated privately")
-         ;; same user trying to update a karma-level for something in the same direction within a minute?
-         (if (karma-too-soon? (:user msgMap) what direction)
-           (create-mention msgMap "Whoa there speedy, give your fingers a rest for a while...")
-           (if (= direction "++")
-             (react-to-karma msgMap what inc)
-             (react-to-karma msgMap what dec))))
+         ;; Also we don't want "behind the scenes" karma medeling so no private message increments/decrements
+         (if (private-message? msgMap)
+           (create-mention msgMap "Sorry, karma cannot be manipulated privately")
+           ;; same user trying to update a karma-level for something in the same direction within a minute?
+           (if (karma-too-soon? (:user msgMap) what direction)
+             (create-mention msgMap "Whoa there speedy, give your fingers a rest for a while...")
+             (if (= direction "++")
+               (react-to-karma msgMap what inc)
+               (react-to-karma msgMap what dec)))))
 
        ;; check if they are trying to add a factoid
        (re-matches #"^[^\s]+\sis\s.+$" msg)
