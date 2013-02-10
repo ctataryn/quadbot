@@ -3,7 +3,7 @@
 
  ;;takes an incomming message and parses it out into it's aggregates
  (defn parseMsg [msg]
-    (zipmap [:user :channel :auth :message] (rest (re-find #"^:(.*)!.*\sPRIVMSG\s(.*)\s:(\+|-)(.*)$" msg))))
+    (zipmap [:user :channel :auth :message] (rest (re-find #"^:(.*)!.*\sPRIVMSG\s(.*)\s:(\+|-)*(.*)$" msg))))
 
  ;; checks to see if the user who sent the message has authed to NickServ
  (defn authed? [msgMap]

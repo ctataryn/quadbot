@@ -35,8 +35,6 @@
 ;;
  (defn message-handler [conn msgMap]
    ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
-  (do
-    (println msgMap)
   (let [msg (.trim (:message msgMap))
         channel (:channel msgMap)
         user (:nick user)]
@@ -60,7 +58,7 @@
             (do
               (println (str "SENT: " response))
                response))
-        )))))
+        ))))
 
  ;;main connection handler
  (defn conn-handler [conn]
