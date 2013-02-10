@@ -121,10 +121,12 @@
     (let [msg (:message msgMap)]
       (cond
         ;;were URLs mentioned in a message?
+        ;;for implementing "Nick: REPOST!"
         (and
           (not (= (:user msgMap) (:nick user)))  ;;quadbot urls are exceptions
           (re-matches #"((mailto\:|(news|(ht|f)tp(s?))\://){1}\S+)" msg))
-        (let [urls (map first (re-seq #"((mailto\:|(news|(ht|f)tp(s?))\://){1}\S+)" msg))]
+        (let [urls (map first (re-seq #"((mailto\:|(news|(ht|f)tp(s?))\://){1}\S+)" msg))]))))
+        ;; not doing anything right now
 
 ;;
 ;; reaction functions below
