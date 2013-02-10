@@ -34,7 +34,6 @@
 ;; Decides on an appropriate handler, and writes the handler's output to the connection
 ;;
  (defn message-handler [conn msgMap]
-   ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
   (let [msg (.trim (:message msgMap))
         channel (:channel msgMap)
         user (:nick user)]
@@ -93,8 +92,3 @@
           (login irc user pwd (clojure.string/split chans #","))
         )))
    
-;;(def irc (connect freenode))
-;; ;;(login irc user)
-;; ;; ;;(write irc "JOIN #test-cwt")
-;; ;; ;; ;;(write irc "QUIT")
-;; ;; ;; ;;
