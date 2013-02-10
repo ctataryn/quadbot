@@ -5,4 +5,5 @@
  (def user {:name "#quadron bot" :nick "quadbot"})
  (def admins #{"ThaDon" "quadbot"})
  (def cmdprefix "~")
+ (def version {:number "1.0" :client_name "QuadBot"})
 

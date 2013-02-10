@@ -61,6 +61,7 @@
                response))
         ))))
 
+ ;;main connection handler
  (defn conn-handler [conn]
       (while 
             (nil? (:exit @conn))
@@ -71,6 +72,8 @@
                              (dosync (alter conn merge {:exit true}))
                              (re-find #":.*\sPRIVMSG\s.*" msg)
                              (message-handler conn (parseMsg msg))
+                             (re-find #"^VERSION" msg)
+                             (write conn (str "VERSION "  (:client_name version) " " (:number version)))
                              (re-find #"^PING" msg)
                              (write conn (str "PONG "  (re-find #":.*" msg)))))))
 
