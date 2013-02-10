@@ -35,18 +35,19 @@
 ;;
  (defn message-handler [conn msgMap]
    ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
+  (do
+    (println msgMap)
   (let [msg (.trim (:message msgMap))
-        channel (or (:channel msgMap) "") ;;sometimes channel is blank, like in VERSION requests
+        channel (:channel msgMap)
         user (:nick user)]
 
     (write-multiple conn (cond
-        ;;add more actions here, for when the bot isn't specifically mentioned in a message
-        ;;
         ;;If the bot was specifically mentioned, the cmdprefix was used or the bot was /msg'd then 
         ;;find out what the user wants
         ;;i.e. quadbot: fact is factoid
         ;;Or: ~fact is factoid
         ;;OR: /msg quadbot fact
+        ;;Otherwise see if what the user is saying is of interest to us and react accordingly
         (or (re-matches (re-pattern (str "^" user ":.*")) msg) 
             (re-matches (re-pattern (str "^" cmdprefix ".*")) msg)
             (= channel user))
@@ -59,7 +60,7 @@
             (do
               (println (str "SENT: " response))
                response))
-        ))))
+        )))))
 
  ;;main connection handler
  (defn conn-handler [conn]
