@@ -26,6 +26,9 @@
      (cond
        ;; parse a command out of msg and return something to write out to the client
 
+       (re-find #"^VERSION" msg)                                                               
+       (write conn (str "VERSION "  (:client_name version) " " (:number version)))
+       
        ;; report karma. Note: in it's current state, this needs to go before factoid reactors 
        ;; or else it won't match
        (re-matches #"^karma\s([\w]+)$" msg)
