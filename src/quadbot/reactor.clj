@@ -15,6 +15,7 @@
  (declare react-to-join)
  (declare react-to-quit)
  (declare react-to-leave)
+ (declare react-to-version)
  (declare react-to-karma)
  (declare karma-too-soon?)
 
@@ -27,7 +28,7 @@
        ;; parse a command out of msg and return something to write out to the client
 
        (re-find #"^VERSION" msg)                                                               
-       (write conn (str "VERSION "  (:client_name version) " " (:number version)))
+       (react-to-version msgMap)
        
        ;; report karma. Note: in it's current state, this needs to go before factoid reactors 
        ;; or else it won't match
@@ -187,6 +188,9 @@
  (defn react-to-leave [msgMap]
    [(create-mention msgMap (str "Ok " (:user msgMap) " I'll be going now...")) 
     (str "PART " (:channel msgMap))])
+
+ (defn react-to-version [msgMap]
+   (str "VERSION "  (:client_name version) " " (:number version)))
 
  ;; checks to see if this user is updating karma on something too soon after they already did
  (defn karma-too-soon? [who what direction]
