@@ -36,7 +36,7 @@
  (defn message-handler [conn msgMap]
    ;; need to make this so the handlers can pass back a sequence of lines to write instead of just one
   (let [msg (.trim (:message msgMap))
-        channel (:channel msgMap)
+        channel (or (:channel msgMap) "") ;;sometimes channel is blank, like in VERSION requests
         user (:nick user)]
 
     (write-multiple conn (cond
