@@ -27,7 +27,7 @@
  (defn write-multiple [conn messages]
   (let [vecparam (if (vector? messages) messages (vector messages))] 
     (cond
-      (and (not (empty? vecparam) (not (empty? (first vecparam)))))
+      (and (not (empty? vecparam)) (not (empty? (first vecparam))))
       (doseq [msg vecparam] (write conn msg)))))
 
 ;;
