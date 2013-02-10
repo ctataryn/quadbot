@@ -13,6 +13,10 @@
  (defn admin? [msgMap]
    (and (authed? msgMap) (not (empty? (admins (:user msgMap))))))
 
+ ;;check if the current message is /msg 
+ (defn private-message? [msgMap]
+   (if (= (:channel msgMap) (:nick user))))
+
  ;;strips the quadbot username from the front of a message
  (defn strip-user [msg]
    (let [pattrn (re-pattern (str "^" (:nick user) ":(.*)"))]
